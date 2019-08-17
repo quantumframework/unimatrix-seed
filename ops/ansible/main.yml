@@ -4,6 +4,7 @@
   gather_facts: false
   environment:
     ANSIBLE_ROLES_PATH: "../roles"
+    PYTHONPATH: ""
   vars:
     K8S_NAMESPACE_PREFIX: "ns{{ deployment_env_alias }}"
     K8S_DEPLOYMENT_ENV: "{{ deployment_env_name|mandatory }}"
