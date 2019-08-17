@@ -24,4 +24,5 @@
   k8s:
     kubeconfig: "{{ k8s_kubeconfig }}"
     state: present
+    force: true
     definition: "{{ lookup('template', 'templates/ca-certificates.yml.j2') }}"
