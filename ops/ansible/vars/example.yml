@@ -1,0 +1,16 @@
+---
+# Specifies the organization name that will be used by the
+# provisioning scripts. Make sure this organization exists
+# in your Ansible Tower installation. If you are not using
+# Ansible Tower, this variable may be omitted.
+awx_organization_name: Wizards of Industry
+
+# Specifies the name of the Kubernetes cluster. This value
+# is assumed to be unique within your environment and is
+# mandatory.
+k8s_cluster_name: cltunimatrix02
+
+# The platform on which your Kubernetes cluster is deployed.
+# Allowed values are 'gke' (Google Kubernetes Engine) and
+# 'aks' (Azure Kubernetes Service). This value is mandatory.
+k8s_platform: gke
