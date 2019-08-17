@@ -9,6 +9,7 @@ ifdef ANSIBLE_TAG
 ANSIBLE_ARGS := $(ANSIBLE_ARGS) -t $(ANSIBLE_TAG)
 endif
 GIT_COMMIT_HASH=$(shell git rev-parse --short HEAD | tr -d '\n')
+PYTHONPATH=""
 
 
 .PHONY: all
@@ -18,6 +19,7 @@ export TOWER_HOST
 export TOWER_USERNAME
 export TOWER_PASSWORD
 export GOOGLE_APPLICATION_CREDENTIALS
+export PYTHONPATH
 
 
 env:
