@@ -1,0 +1,15 @@
+---
+- hosts: localhost
+  run_once: true
+  gather_facts: false
+  environment:
+    ANSIBLE_ROLES_PATH: "../roles"
+  vars:
+    K8S_NAMESPACE_PREFIX: "ns{{ deployment_env_alias }}"
+    K8S_DEPLOYMENT_ENV: "{{ deployment_env_name|mandatory }}"
+    target_environment: "{{ K8S_DEPLOYMENT_ENV|default('cluster') }}"
+  pre_tasks:
+  - include_tasks: includes/auth.yml
+  tasks:
+  - debug:
+      msg: "This playbook is a stub."
