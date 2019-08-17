@@ -24,10 +24,11 @@ env:
 	@python3 -m venv env
 	@source ./env/bin/activate;\
 	pip3 install -r requirements.txt
-	ansible-galaxy install -r ./roles/requirements.yml
+	ansible-galaxy install -r ./roles/requirements.yml --force
 
 clean:
 	@rm -rf ./env
+	@rm -rf ./roles/unimatrix-awx
 
 
 _deploy:
