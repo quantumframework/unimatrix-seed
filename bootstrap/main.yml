@@ -26,29 +26,29 @@
   tasks:
   - include_tasks: ../bootstrap/includes/prerequisites.yml
   - include_tasks: ../bootstrap/includes/facts.yml
-  #- include_tasks: ../bootstrap/includes/namespaces.yml
+  - include_tasks: ../bootstrap/includes/namespaces.yml
   - include_tasks: ../bootstrap/includes/x509.yml
-  #- name: run common manifests
-  #  with_filetree: manifests/common
-  #  when: item.state == 'file'
-  #  k8s:
-  #    kubeconfig: "{{ k8s_kubeconfig }}"
-  #    state: present
-  #    definition: "{{ lookup('template', item.src) }}"
-  #- name: run vendor-specific manifests
-  #  k8s:
-  #    kubeconfig: "{{ k8s_kubeconfig }}"
-  #    state: present
-  #    definition: "{{ lookup('template', 'manifests/vendor/{{ k8s_platform }}.yml') }}"
-  #- name: run user-defined manifests
-  #  with_filetree: manifests/user
-  #  when: item.state == 'file'
-  #  k8s:
-  #    kubeconfig: "{{ k8s_kubeconfig }}"
-  #    state: present
-  #    definition: "{{ lookup('template', item.src) }}"
-  #- name: announce cluster at Ansible Tower
-  #  include_tasks: ../bootstrap/includes/awx.yml
-  #  when: awx_configured
-  #- name: run user-defined tasks
-  #  include_tasks: user.yml
+  - name: run common manifests
+    with_filetree: manifests/common
+    when: item.state == 'file'
+    k8s:
+      kubeconfig: "{{ k8s_kubeconfig }}"
+      state: present
+      definition: "{{ lookup('template', item.src) }}"
+  - name: run vendor-specific manifests
+    k8s:
+      kubeconfig: "{{ k8s_kubeconfig }}"
+      state: present
+      definition: "{{ lookup('template', 'manifests/vendor/{{ k8s_platform }}.yml') }}"
+  - name: run user-defined manifests
+    with_filetree: manifests/user
+    when: item.state == 'file'
+    k8s:
+      kubeconfig: "{{ k8s_kubeconfig }}"
+      state: present
+      definition: "{{ lookup('template', item.src) }}"
+  - name: announce cluster at Ansible Tower
+    include_tasks: ../bootstrap/includes/awx.yml
+    when: awx_configured
+  - name: run user-defined tasks
+    include_tasks: user.yml
