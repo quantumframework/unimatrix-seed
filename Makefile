@@ -66,10 +66,6 @@ bootstrap-backup:
 	make _bootstrap TARGET_DEPLOYMENT_ENV=backup
 
 
-bootstrap-disaster:
-	make _bootstrap TARGET_DEPLOYMENT_ENV=disaster
-
-
 bootstrap-resilience:
 	make _bootstrap TARGET_DEPLOYMENT_ENV=resilience
 
@@ -100,10 +96,6 @@ deploy-production:
 
 deploy-backup:
 	make _deploy TARGET_DEPLOYMENT_ENV=backup
-
-
-deploy-disaster:
-	make _deploy TARGET_DEPLOYMENT_ENV=disaster
 
 
 deploy-penetration:
