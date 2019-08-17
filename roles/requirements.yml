@@ -1,3 +1,3 @@
 - src: https://github.com/quantumframework/ansible-unimatrix-awx
-  version: master
+  version: 4dd55a582f3c4d49609a1b064bb1d1f53ea7ce8c
   name: unimatrix-awx
