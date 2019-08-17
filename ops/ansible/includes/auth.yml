@@ -1,0 +1,105 @@
+---
+# Figure out from which sources we gather the credentials for the
+# Kubernetes cluster. The preferred order is:
+#
+# 1. Ansible facts (k8s_api_key, k8s_host and k8s_ca_cert_content).
+# 2. Environment variables (K8S_AUTH_API_KEY, K8S_AUTH_HOST, K8S_AUTH_SSL_CA_CERT).
+# 3. Kubeconfig (K8S_AUTH_KUBECONFIG)
+#
+# Determine the authentication strategy based on the presence of
+# these facts and variables. If no authentication strategy can be
+# determined, then default to kubeconfig with ~/.kube/config.
+#
+# Note that all these tasks must execute on the local host, to
+# prevent the unecessary transfer of sensitive information over
+# the network. Also, if environment variables are passed in
+# succeeding environment blocks, these are shown as-is in the
+# Ansible Tower logs.
+- name: set Kubernetes authentication strategy to kubeconfig
+  when: "lookup('env', 'K8S_AUTH_KUBECONFIG')"
+  delegate_to: localhost
+  set_fact:
+    k8s_auth_strategy: kubeconfig
+    k8s_kubeconfig: "{{ lookup('env', 'K8S_AUTH_KUBECONFIG') }}"
+
+- name: set k8s_host, k8s_ca_cert and k8s_api_key from environment
+  when: >-
+    lookup('env', 'K8S_AUTH_HOST')
+    and lookup('env', 'K8S_AUTH_SSL_CA_CERT')
+    and lookup('env', 'K8S_AUTH_API_KEY')
+  delegate_to: localhost
+  set_fact:
+    k8s_host: "{{ lookup('env', 'K8S_AUTH_HOST') }}"
+    k8s_api_key: "{{ lookup('env', 'K8S_AUTH_API_KEY') }}"
+    k8s_ca_cert: "{{ lookup('env', 'K8S_AUTH_SSL_CA_CERT') }}"
+
+- name: set Kubernetes authentication strategy to facts
+  when: k8s_ca_cert is defined and k8s_host is defined and k8s_api_key is defined
+  delegate_to: localhost
+  set_fact:
+    k8s_auth_strategy: facts
+
+- name: default to kubeconfig authentication strategy
+  when: k8s_auth_strategy is not defined
+  set_fact:
+    k8s_auth_strategy: kubeconfig
+    k8s_kubeconfig: "~/.kube/config"
+
+- name: create a temporary directory to hold local files
+  when: "inventory_hostname != 'localhost'"
+  register: k8s_tempfile
+  delegate_to: localhost
+  tempfile:
+    state: directory
+    suffix: "{{ lookup('password', '/dev/null length=32 chars=ascii_lowercase') }}"
+
+- name: copy the cluster CA certificate to the remote
+  when: "inventory_hostname != 'localhost' and k8s_auth_strategy == 'facts'"
+  changed_when: false
+  delegate_to: localhost
+  copy:
+    src: "{{ k8s_ca_cert }}"
+    dest: k8s_tempfile.path
+
+- name: set the remote CA certificate location as Ansible fact
+  when: "inventory_hostname != 'localhost' and k8s_auth_strategy == 'facts'"
+  delegate_to: localhost
+  set_fact:
+    k8s_ca_cert: "{{ k8s_tempfile.path }}"
+
+- name: copy the kubeconfig to the remote
+  when: "inventory_hostname != 'localhost' and k8s_auth_strategy == 'kubeconfig'"
+  changed_when: false
+  delegate_to: localhost
+  copy:
+    src: "{{ k8s_kubeconfig }}"
+    dest: k8s_tempfile.path
+
+- name: set the remote kubeconfig location as Ansible fact
+  when: "inventory_hostname != 'localhost' and k8s_auth_strategy == 'kubeconfig'"
+  delegate_to: localhost
+  set_fact:
+    k8s_kubeconfig: "{{ k8s_tempfile.path }}"
+
+- name: expand the user path on kubeconfig
+  when: "k8s_auth_strategy == 'kubeconfig'"
+  set_fact:
+    k8s_kubeconfig: "{{ k8s_kubeconfig|expanduser }}"
+
+- name: assert that the kubeconfig exists
+  when: "k8s_auth_strategy == 'kubeconfig'"
+  assert:
+    that: "{{ k8s_kubeconfig is exists }}"
+    msg: "{{ k8s_kubeconfig }}"
+
+- name: clear unused variables (kubeconfig strategy)
+  when: "k8s_auth_strategy == 'kubeconfig'"
+  set_fact:
+    k8s_host: null
+    k8s_api_key: null
+    k8s_ca_cert: null
+
+- name: clear unused variables (facts strategy)
+  when: "k8s_auth_strategy == 'facts'"
+  set_fact:
+    k8s_kubeconfig: null
