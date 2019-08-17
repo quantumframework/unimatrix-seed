@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: x509.ca.trusted
+  namespace: "{{ ns.metadata.name }}"
+{% if certificates|default(None) %}
+data:
+  {% for fp in certificates %}{{ loop.index }}.pem: |
+    {{ lookup('file', fp.path)|indent(4) }}
+  {% endfor %}
+{%- else %}
+data: {}
+{%- endif %}

@@ -1,0 +1,27 @@
+---
+- name: lookup namespaces
+  register: result
+  k8s_facts:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    kind: Namespace
+
+- set_fact:
+    namespaces: "{{ result.resources }}"
+
+- name: find certificates
+  register: result
+  find:
+    paths: ../pki
+    patterns: "*.crt,*.pem"
+
+- set_fact:
+    certificates: "{{ result.files }}"
+
+- name: create ConfigMap holding the certificates
+  with_items: "{{ namespaces }}"
+  loop_control:
+    loop_var: ns
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'templates/ca-certificates.yml.j2') }}"
