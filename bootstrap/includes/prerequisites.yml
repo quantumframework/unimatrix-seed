@@ -1,0 +1,30 @@
+---
+- name: collect the X.509 key and certificate for the cluster issuer
+  register: result
+  k8s_facts:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    kind: Secret
+    namespace: kube-system
+    name: "{{ unimatrix_ca_secret }}"
+
+- when: not result.resources
+  fail:
+    msg: >-
+      Create a Secret resource of type TLS named {{ unimatrix_ca_secret }}
+      in the kube-system namespace.
+
+- when: >-
+    k8s_cluster_name is not defined
+    or not k8s_cluster_name
+  fail:
+    msg: >-
+      Specify the Kubernetes cluster name with Ansible fact
+      k8s_cluster_name
+
+- when: >-
+    k8s_platform is not defined
+    or not k8s_platform in ["gke", "aks"]
+  fail:
+    msg: >-
+      Specify the Kubernetes cluster name with Ansible fact
+      k8s_platform

@@ -1,0 +1,53 @@
+---
+#######################################################################
+#
+#   BOOTSTRAP ANSIBLE PLAYBOOK for UNIMATRIX CLUSTERS
+#
+#   This playbook runs all tasks required to bootstrap the Kubernetes
+#   cluster that is maintained by Unimatrix One.
+#
+#######################################################################
+- hosts: localhost
+  run_once: true
+  gather_facts: false
+  environment:
+    ANSIBLE_ROLES_PATH: "../roles"
+  vars:
+    K8S_NAMESPACE_PREFIX: "ns{{ deployment_env_alias }}"
+    K8S_DEPLOYMENT_ENV: "{{ deployment_env_name|mandatory }}"
+    default_pwd: "/dev/null length=32 chars=hexdigits"
+    k8s_validate_certs: false
+    target_environment: "{{ K8S_DEPLOYMENT_ENV|default('cluster') }}"
+    unimatrix_ca_secret: x509.ca.default
+  pre_tasks:
+  - include_tasks: ../ops/ansible/includes/auth.yml
+  - include_vars: "../ops/ansible/defaults/{{ deployment_env_name }}.yml"
+  - include_vars: "../ops/ansible/vars/{{ deployment_env_name }}.yml"
+  tasks:
+  - include_tasks: ../bootstrap/includes/prerequisites.yml
+  - include_tasks: ../bootstrap/includes/facts.yml
+  - include_tasks: ../bootstrap/includes/namespaces.yml
+  #- name: run common manifests
+  #  with_filetree: manifests/common
+  #  when: item.state == 'file'
+  #  k8s:
+  #    kubeconfig: "{{ k8s_kubeconfig }}"
+  #    state: present
+  #    definition: "{{ lookup('template', item.src) }}"
+  #- name: run vendor-specific manifests
+  #  k8s:
+  #    kubeconfig: "{{ k8s_kubeconfig }}"
+  #    state: present
+  #    definition: "{{ lookup('template', 'manifests/vendor/{{ k8s_platform }}.yml') }}"
+  #- name: run user-defined manifests
+  #  with_filetree: manifests/user
+  #  when: item.state == 'file'
+  #  k8s:
+  #    kubeconfig: "{{ k8s_kubeconfig }}"
+  #    state: present
+  #    definition: "{{ lookup('template', item.src) }}"
+  - name: announce cluster at Ansible Tower
+    include_tasks: ../bootstrap/includes/awx.yml
+    when: awx_configured
+  - name: run user-defined tasks
+    include_tasks: user.yml

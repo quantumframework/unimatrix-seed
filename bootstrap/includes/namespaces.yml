@@ -1,0 +1,12 @@
+---
+- name: create default namespaces
+  with_items:
+  - state: present
+    name: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+  - state: present
+    name: unimatrix
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: "{{ item.state|mandatory }}"
+    kind: Namespace
+    name: "{{ item.name|mandatory }}"

@@ -1,0 +1,58 @@
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: "quantum.rdbms"
+provisioner: kubernetes.io/azure-disk
+allowVolumeExpansion: true
+reclaimPolicy: Retain
+parameters:
+  storageaccounttype: Premium_LRS
+  kind: Managed
+
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: "quantum.faster"
+provisioner: kubernetes.io/azure-disk
+allowVolumeExpansion: false
+reclaimPolicy: Delete
+parameters:
+  storageaccounttype: Premium_LRS
+  kind: Managed
+
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: "quantum.highio"
+provisioner: "kubernetes.io/gce-pd"
+allowVolumeExpansion: false
+reclaimPolicy: Delete
+parameters:
+  storageaccounttype: Premium_LRS
+  kind: Managed
+
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: "quantum.expandable"
+provisioner: kubernetes.io/azure-disk
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+parameters:
+  cachingmode: ReadOnly
+  kind: Managed
+  storageaccounttype: Standard_LRS
+
+---
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: ClusterIssuer
+metadata:
+  name: "default"
+  namespace: "kube-system"
+spec:
+  ca:
+    secretName: "x509.ca.default"

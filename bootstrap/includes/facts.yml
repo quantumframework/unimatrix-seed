@@ -1,0 +1,23 @@
+---
+- set_fact:
+    awx_configured: false
+
+- when: awx_url is not defined
+  set_fact:
+    awx_url: "{{ lookup('env', 'TOWER_HOST') }}"
+
+- when: awx_username is not defined
+  set_fact:
+    awx_username: "{{ lookup('env', 'TOWER_USERNAME') }}"
+
+- when: awx_password is not defined
+  set_fact:
+    awx_password: "{{ lookup('env', 'TOWER_PASSWORD') }}"
+
+- when: awx_verify_ssl is not defined
+  set_fact:
+    awx_verify_ssl: "{{ lookup('env', 'TOWER_VERIFY_SSL') == '1' }}"
+
+- when: awx_url and awx_username and awx_password
+  set_fact:
+    awx_configured: true

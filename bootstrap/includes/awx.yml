@@ -1,0 +1,68 @@
+---
+- name: create Unimatrix One service account
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        namespace: kube-system
+        name: queen
+      automountServiceAccountToken: false
+
+- name: lookup Unimatrix One service account resource
+  register: query
+  k8s_facts:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    kind: ServiceAccount
+    namespace: kube-system
+    name: queen
+
+- name: lookup Unimatrix One service account secret
+  register: query
+  k8s_facts:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    kind: Secret
+    namespace: kube-system
+    name: "{{ query.resources[0]['secrets'][0]['name'] }}"
+
+- name: set service account credentials as Ansible facts
+  set_fact:
+    queen_sa_ca_crt: "{{ query.resources[0]['data']['ca.crt']|b64decode }}"
+    queen_sa_token: "{{ query.resources[0]['data']['token']|b64decode }}"
+
+- name: lookup Kubernetes API endpoint
+  register: query
+  k8s_facts:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    kind: Endpoints
+    namespace: default
+    name: kubernetes
+
+- name: set Kubernetes API endpoint parameters as Ansible facts
+  set_fact:
+    k8s_api_host: "{{ query.resources[0]['subsets'][0]['addresses'][0]['ip'] }}"
+    k8s_api_port: "{{ query.resources[0]['subsets'][0]['ports'][0]['port'] }}"
+
+- name: set Kubernetes API endpoint URL and Ansible Tower credential name
+  set_fact:
+    k8s_api_url: "https://{{ k8s_api_host }}:{{ k8s_api_port }}"
+    awx_credential_name: "{{ k8s_cluster_name }}:kube-system:queen"
+
+- name: include unimatrix-awx role to create cluster credentials
+  include_role:
+    name: unimatrix-awx
+  vars:
+    awx_projects: []
+    awx_credentials:
+    - credential_type:
+        kind: cloud
+        name: "Kubernetes Kubeconfig (Service Account)"
+      name: "{{ awx_credential_name }}"
+      organization:
+        name: "{{ awx_organization_name }}"
+      inputs:
+        api_url: "{{ k8s_api_url }}"
+        api_token: "{{ queen_sa_token }}"
+        api_ca_crt: "{{ queen_sa_ca_crt }}"
