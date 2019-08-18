@@ -1,0 +1,33 @@
+---
+- name: create pod security policy for unrestricted access
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: policy/v1beta1
+      kind: PodSecurityPolicy
+      metadata:
+        name: unimatrix.any
+        annotations:
+          seccomp.security.alpha.kubernetes.io/allowedProfileNames: '*'
+      spec:
+        privileged: true
+        allowPrivilegeEscalation: true
+        allowedCapabilities:
+        - '*'
+        volumes:
+        - '*'
+        hostNetwork: true
+        hostPorts:
+        - min: 0
+          max: 65535
+        hostIPC: true
+        hostPID: true
+        runAsUser:
+          rule: 'RunAsAny'
+        seLinux:
+          rule: 'RunAsAny'
+        supplementalGroups:
+          rule: 'RunAsAny'
+        fsGroup:
+          rule: 'RunAsAny'
