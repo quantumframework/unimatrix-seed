@@ -21,3 +21,16 @@
 - when: awx_url and awx_username and awx_password
   set_fact:
     awx_configured: true
+
+- name: lookup Kubernetes API endpoint
+  register: query
+  k8s_facts:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    kind: Endpoints
+    namespace: default
+    name: kubernetes
+
+- name: set Kubernetes API endpoint parameters as Ansible facts
+  set_fact:
+    k8s_api_host: "{{ query.resources[0]['subsets'][0]['addresses'][0]['ip'] }}"
+    k8s_api_port: "{{ query.resources[0]['subsets'][0]['ports'][0]['port'] }}"
