@@ -50,7 +50,8 @@
       apiVersion: policy/v1beta1
       kind: PodSecurityPolicy
       metadata:
-        name: unimatrix.any
+        #name: unimatrix.any
+        name: unimatrix.default
         annotations:
           seccomp.security.alpha.kubernetes.io/allowedProfileNames: '*'
       spec:
