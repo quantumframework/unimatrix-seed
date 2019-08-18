@@ -1,4 +1,44 @@
 ---
+- name: create pod security policy for default access
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: extensions/v1beta1
+      kind: PodSecurityPolicy
+      metadata:
+        name: unimatrix.default
+        labels:
+          app.kubernetes.io/name: unimatrix.default
+        annotations:
+          seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'docker/default'
+          apparmor.security.beta.kubernetes.io/allowedProfileNames: 'runtime/default'
+          seccomp.security.alpha.kubernetes.io/defaultProfileName:  'docker/default'
+          apparmor.security.beta.kubernetes.io/defaultProfileName:  'runtime/default'
+      spec:
+        allowPrivilegeEscalation: false
+        fsGroup:
+          ranges:
+          - max: 65535
+            min: 1
+          rule: MustRunAs
+        readOnlyRootFilesystem: true
+        requiredDropCapabilities:
+        - ALL
+        runAsUser:
+          rule: MustRunAsNonRoot
+        seLinux:
+          rule: RunAsAny
+        supplementalGroups:
+          ranges:
+          - max: 65535
+            min: 1
+          rule: MayRunAs
+        volumes:
+        - configMap
+        - secret
+        - persistentVolumeClaim
+
 - name: create pod security policy for unrestricted access
   k8s:
     kubeconfig: "{{ k8s_kubeconfig }}"
