@@ -1,0 +1,3 @@
+---
+- debug:
+    msg: "No user-defined tasks specified"
