@@ -1,0 +1,36 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-allow
+  namespace: '{{ ns.metadata.name }}'
+  labels:
+    app.kubernetes.io/name: default-allow
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          app.kubernetes.io/name: "{{ ns.metadata.name }}"
+  egress:
+{% if allow_cluster_api %}
+  - ports:
+    - port: 443
+      protocol: TCP
+    to:
+    - ipBlock:
+        cidr: "{{ k8s_api_host }}/32"
+{% endif %}
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          app.kubernetes.io/name: "{{ ns.metadata.name }}"
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
