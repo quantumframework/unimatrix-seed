@@ -1,4 +1,6 @@
 ---
+project:
+  type: k8s+cluster
 deployment:
   environments:
     development:
