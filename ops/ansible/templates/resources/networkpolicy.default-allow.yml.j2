@@ -25,6 +25,31 @@ spec:
     - ipBlock:
         cidr: "{{ k8s_api_host }}/32"
 {% endif %}
+{% if cidr_whitelist %}
+{% for trusted in cidr_whitelist %}
+{% if not trusted.ranges|default(None) and trusted.ports|default(None) %}
+  - ports:
+{% for transport in trusted.ports %}
+    - port: {{ transport.port }}
+      protocol: {{ transport.protocol }}
+{% endfor %}
+{% endif %}
+{% if trusted.ranges|default(None) %}
+  - to:
+{% for cidr in trusted.ranges %}
+    - ipBlock:
+        cidr: "{{ cidr }}"
+{% endfor %}
+{% if trusted.ports|default(None) %}
+    ports:
+{% for transport in trusted.ports %}
+    - port: {{ transport.port }}
+      protocol: {{ transport.protocol }}
+{% endfor %}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
   - to:
     - namespaceSelector:
         matchLabels:

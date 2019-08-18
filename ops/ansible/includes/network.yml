@@ -8,14 +8,17 @@
     - default
     - unimatrix
     allow_cluster_api: "{{ ns.metadata.labels['net.unimatrixone.io/allow-cluster-api']|default('false') == 'true' }}"
+    cidr_whitelist: "{{ cluster_cidr_whitelist|default([]) }}"
   with_items: "{{ k8s_namespaces }}"
   loop_control:
     loop_var: ns
-  k8s:
-    kubeconfig: "{{ k8s_kubeconfig }}"
-    state: present
-    force: true
-    definition: "{{ lookup('template', 'resources/networkpolicy.default-allow.yml.j2') }}"
+  #k8s:
+  #  kubeconfig: "{{ k8s_kubeconfig }}"
+  #  state: present
+  #  force: true
+  #  definition: "{{ lookup('template', 'resources/networkpolicy.default-allow.yml.j2') }}"
+  debug:
+    msg: "{{ lookup('template', 'resources/networkpolicy.default-allow.yml.j2') }}"
 
 - name: configure default deny policy
   when: ns.metadata.name not in excluded_namespaces
