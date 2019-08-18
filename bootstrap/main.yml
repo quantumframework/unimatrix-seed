@@ -26,7 +26,7 @@
   - include_vars: "../ops/ansible/vars/{{ deployment_env_name }}.yml"
   tasks:
   - include_tasks: ../bootstrap/includes/prerequisites.yml
-  - include_tasks: ../bootstrap/includes/facts.yml
+  - include_tasks: ../ops/ansible/includes/facts.yml
   - include_tasks: ../bootstrap/includes/namespaces.yml
   - include_tasks: ../bootstrap/includes/x509.yml
   - include_tasks: ../bootstrap/includes/psp.yml
