@@ -7,7 +7,7 @@
       apiVersion: policy/v1beta1
       kind: PodSecurityPolicy
       metadata:
-        name: 0000-unimatrix.any
+        name: unimatrix.any
         annotations:
           seccomp.security.alpha.kubernetes.io/allowedProfileNames: '*'
       spec:
@@ -47,6 +47,6 @@
         resources:
         - podsecuritypolicies
         resourceNames:
-        - "0000-unimatrix.any"
+        - "unimatrix.any"
         verbs:
         - use
