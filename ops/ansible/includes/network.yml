@@ -1,0 +1,20 @@
+---
+- name: configure default allow policy
+  when: ns.metadata.name not in excluded_namespaces
+  vars:
+    excluded_namespaces:
+    - kube-system
+    - kube-public
+    - default
+    - unimatrix
+    allow_cluster_api: "{{ ns.metadata.labels['net.unimatrixone.io/allow-cluster-api']|default('false') == 'true' }}"
+  with_items: "{{ k8s_namespaces }}"
+  loop_control:
+    loop_var: ns
+  debug:
+    msg: "{{ allow_cluster_api }}"
+  #k8s:
+  #  kubeconfig: "{{ k8s_kubeconfig }}"
+  #  state: present
+  #  force: true
+  #  definition: "{{ lookup('template', 'networkpolicy.default-allow.yml.j2') }}"

@@ -16,4 +16,5 @@
   - include_vars: "defaults/{{ deployment_env_name }}.yml"
   - include_vars: "vars/{{ deployment_env_name }}.yml"
   - include_tasks: tasks/k8s/main.yml
+  - include_tasks: includes/network.yml
   - include_tasks: user.yml
