@@ -44,5 +44,5 @@
         name: unimatrix.any
       subjects:
       - kind: ServiceAccount
-        namespace: nspinfra0002
+        namespace: kube-system
         name: queen
