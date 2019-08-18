@@ -80,7 +80,7 @@
       apiVersion: rbac.authorization.k8s.io/v1
       kind: ClusterRole
       metadata:
-        name: unimatrix.any
+        name: unimatrix.psp.any
       rules:
       - apiGroups:
         - policy
@@ -88,5 +88,24 @@
         - podsecuritypolicies
         resourceNames:
         - "unimatrix.any"
+        verbs:
+        - use
+
+- name: create ClusterRole with access to the unimatrix.default policy.
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRole
+      metadata:
+        name: unimatrix.psp.default
+      rules:
+      - apiGroups:
+        - policy
+        resources:
+        - podsecuritypolicies
+        resourceNames:
+        - "unimatrix.default"
         verbs:
         - use
