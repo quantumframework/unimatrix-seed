@@ -75,7 +75,7 @@
         fsGroup:
           rule: 'RunAsAny'
 
-- name: create ClusterRole with access to the unimatrix.any policy.
+- name: create ClusterRole with access to all policies
   k8s:
     kubeconfig: "{{ k8s_kubeconfig }}"
     state: present
@@ -89,8 +89,6 @@
         - policy
         resources:
         - podsecuritypolicies
-        resourceNames:
-        - "unimatrix.any"
         verbs:
         - use
 
