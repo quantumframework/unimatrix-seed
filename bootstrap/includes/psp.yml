@@ -36,8 +36,11 @@
           rule: MayRunAs
         volumes:
         - configMap
+        - downwardAPI
+        - emptyDir
         - secret
         - persistentVolumeClaim
+        - projected
 
 - name: create pod security policy for unrestricted access
   k8s:
