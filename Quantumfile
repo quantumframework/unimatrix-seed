@@ -1,0 +1,51 @@
+---
+deployment:
+  environments:
+    development:
+      alias: d
+      annotations: {}
+      name: development
+      production: false
+      purgeable: true
+    testing:
+      alias: t
+      annotations: {}
+      name: testing
+      production: false
+      purgeable: false
+    acceptance:
+      alias: a
+      annotations: {}
+      name: acceptance
+      production: false
+      purgeable: false
+    production:
+      alias: p
+      annotations: {}
+      name: production
+      production: true
+      purgeable: false
+    backup:
+      alias: b
+      annotations: {}
+      name: backup
+      production: false
+      purgeable: false
+    penetration:
+      alias: x
+      annotations: {}
+      name: penetration
+      production: false
+      purgeable: false
+    resilience:
+      alias: r
+      annotations: {}
+      name: resilience
+      production: false
+      purgeable: false
+    stress:
+      alias: s
+      annotations: {}
+      name: stress
+      production: false
+      purgeable: false
