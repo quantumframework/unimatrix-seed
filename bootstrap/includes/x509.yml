@@ -1,12 +1,6 @@
 ---
-- name: lookup namespaces
-  register: result
-  k8s_facts:
-    kubeconfig: "{{ k8s_kubeconfig }}"
-    kind: Namespace
-
 - set_fact:
-    namespaces: "{{ result.resources }}"
+    namespaces: "{{ k8s_namespaces }}"
 
 - name: find certificates
   register: result
