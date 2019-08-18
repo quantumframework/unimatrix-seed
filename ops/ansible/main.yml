@@ -11,6 +11,7 @@
     target_environment: "{{ K8S_DEPLOYMENT_ENV|default('cluster') }}"
   pre_tasks:
   - include_tasks: includes/auth.yml
+  - include_tasks: includes/facts.yml
   tasks:
   - include_vars: "defaults/{{ deployment_env_name }}.yml"
   - include_vars: "vars/{{ deployment_env_name }}.yml"
