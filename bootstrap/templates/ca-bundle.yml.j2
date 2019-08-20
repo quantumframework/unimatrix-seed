@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: x509.ca.bundle
+  namespace: "{{ ns.metadata.name }}"
+{% if certificates|default(None) %}
+data:
+  ca-bundle.pem: |-
+{% for fp in certificates %}
+    {{ lookup('file', fp.path)|indent(4) }}
+{% endfor %}
+{%- else %}
+data: {}
+{%- endif %}
