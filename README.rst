@@ -69,3 +69,17 @@ shows an example of such a configuration file.
 
 .. literalinclude:: ops/ansible/vars/example.yml
   :language: yaml
+
+
+Appendix A: Logstash port allocation
+====================================
+
+============  ===========================
+**Port**      **Consumer**
+============  ===========================
+**8000**      Reserved
+**8001**      Squid access logs
+**8002**      Reserved
+**8003**      Nginx access logs (ingress)
+**8004**      Reserved
+============  ===========================
