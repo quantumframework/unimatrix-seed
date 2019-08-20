@@ -59,3 +59,20 @@
 - when: http_proxy_memory is not defined
   set_fact:
     http_proxy_memory: 256Mi
+
+- when: logstash_enabled is not defined
+  set_fact:
+    logstash_enabled: true
+
+- when: logstash_replicas is not defined
+  set_fact:
+    logstash_replicas: 1
+
+- when: logstash_cpu is not defined
+  set_fact:
+    logstash_cpu: 250m
+
+- when: logstash_memory is not defined
+  set_fact:
+    logstash_memory: 256Mi
+
