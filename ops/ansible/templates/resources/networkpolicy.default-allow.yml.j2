@@ -55,6 +55,16 @@ spec:
 {% endif %}
 {% endfor %}
 {% endif %}
+{% if http_use_proxy %}
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          app.kubernetes.io/name: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/part-of: proxy
+          app.kubernetes.io/component: http
+{% endif %}
   - to:
     - namespaceSelector:
         matchLabels:
