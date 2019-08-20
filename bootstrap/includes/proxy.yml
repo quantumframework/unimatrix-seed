@@ -1,0 +1,140 @@
+---
+- name: created ConfigMap with proxy whitelist
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'templates/configmap.squid.config.whitelist.yml.j2') }}"
+
+- name: deployed Squid
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: apps/v1beta1
+      kind: Deployment
+      metadata:
+        name: squid
+        namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+        labels:
+          app.kubernetes.io/name: squid
+          app.kubernetes.io/part-of: proxy
+          app.kubernetes.io/component: http
+      spec:
+        replicas: "{{ http_proxy_replicas }}"
+        selector:
+          matchLabels: &SQUID_LABELS
+            app.kubernetes.io/name: squid
+            app.kubernetes.io/part-of: proxy
+            app.kubernetes.io/component: http
+        template:
+          metadata:
+            labels: *SQUID_LABELS
+          spec:
+            automountServiceAccountToken: false
+            securityContext:
+              fsGroup: 1000
+              runAsGroup: 1000
+              runAsUser: 1000
+            affinity:
+              podAntiAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchExpressions:
+                    - key: app.kubernetes.io/name
+                      operator: In
+                      values:
+                      - squid
+                  topologyKey: kubernetes.io/hostname
+            volumes:
+            - configMap:
+                defaultMode: 420
+                name: x509.ca.trusted
+              name: ca-certificates
+            - configMap:
+                defaultMode: 420
+                name: x509.ca.bundle
+              name: ca-bundle
+            - configMap:
+                defaultMode: 420
+                name: squid.config.whitelist
+              name: whitelist
+            - emptyDir: {}
+              name: var
+            - emptyDir: {}
+              name: cache
+            - emptyDir: {}
+              name: log
+            initContainers:
+            - name: clean-state
+              image: busybox
+              command: ["sh", "-c", "rm -rf /var/lib/squid/*"]
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                  - ALL
+                privileged: false
+                readOnlyRootFilesystem: true
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "128Mi"
+                limits:
+                  cpu: "100m"
+                  memory: "128Mi"
+              volumeMounts:
+              - name: var
+                mountPath: /var/lib/squid
+            containers:
+            - name: squid
+              image: docker.io/quantumframework/squid:4.8
+              imagePullPolicy: Always
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                  - ALL
+                privileged: false
+                readOnlyRootFilesystem: true
+              ports:
+              - name: http
+                containerPort: 3128
+              - name: https
+                containerPort: 3129
+              resources:
+                limits:
+                  cpu: "{{ http_proxy_cpu }}"
+                  memory: "{{ http_proxy_memory }}"
+                requests:
+                  cpu: "{{ http_proxy_cpu }}"
+                  memory: "{{ http_proxy_memory }}"
+              envFrom:
+              - configMapRef:
+                  name: cluster.environ.common
+              env:
+              - name: HTTP_PROXY
+                value: ""
+              - name: HTTPS_PROXY
+                value: ""
+              - name: http_proxy
+                value: ""
+              - name: https_proxy
+                value: ""
+              volumeMounts:
+              - mountPath: /usr/local/share/ca-certificates
+                name: ca-certificates
+                readOnly: true
+              - mountPath: /usr/local/share/ca-bundle.pem
+                name: ca-bundle
+                readOnly: true
+                subPath: ca-bundle.pem
+              - mountPath: /etc/squid/whitelist.txt
+                name: whitelist
+                readOnly: true
+                subPath: whitelist.txt
+              - mountPath: /var/lib/squid
+                name: var
+              - mountPath: /var/cache/squid
+                name: cache
+              - mountPath: /var/log/squid
+                name: log
