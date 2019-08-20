@@ -43,3 +43,19 @@
 
 - set_fact:
     k8s_namespaces: "{{ result.resources }}"
+
+- when: http_proxy_enabled is not defined
+  set_fact:
+    http_proxy_enabled: true
+
+- when: http_proxy_replicas is not defined
+  set_fact:
+    http_proxy_replicas: 3
+
+- when: http_proxy_cpu is not defined
+  set_fact:
+    http_proxy_cpu: 100m
+
+- when: http_proxy_memory is not defined
+  set_fact:
+    http_proxy_memory: 128Mi
