@@ -54,8 +54,8 @@
 
 - when: http_proxy_cpu is not defined
   set_fact:
-    http_proxy_cpu: 100m
+    http_proxy_cpu: 250m
 
 - when: http_proxy_memory is not defined
   set_fact:
-    http_proxy_memory: 128Mi
+    http_proxy_memory: 256Mi
