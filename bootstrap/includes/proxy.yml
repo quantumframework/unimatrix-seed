@@ -5,6 +5,45 @@
     state: present
     definition: "{{ lookup('template', 'templates/configmap.squid.config.whitelist.yml.j2') }}"
 
+- name: created X.509 certificate for Squid
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: certmanager.k8s.io/v1alpha1
+      kind: Certificate
+      metadata:
+        name: "x509.local.cluster.svc.{{ K8S_NAMESPACE_PREFIX }}infra0000.proxy"
+        namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+        labels:
+          app.kubernetes.io/component: pki
+          app.kubernetes.io/name: "x509.local.cluster.svc.{{ K8S_NAMESPACE_PREFIX }}infra0000.proxy"
+          app.kubernetes.io/part-of: proxy
+        annotations: {}
+      spec:
+        duration: 2160h
+        renewBefore: 360h
+        secretName: "x509.local.cluster.svc.{{ K8S_NAMESPACE_PREFIX }}infra0000.proxy"
+        issuerRef:
+          kind: ClusterIssuer
+          name: default
+        commonName: "proxy.{{ cluster_base_domain }}"
+        dnsNames:
+        - proxy
+        - "proxy.{{ K8S_NAMESPACE_PREFIX }}infra0000"
+        - "proxy.{{ K8S_NAMESPACE_PREFIX }}infra0000.svc.cluster.local"
+
+- name: wait until the private key for the certificate is generated
+  register: result
+  until: result.resources and 'tls.key' in result.resources[0].data
+  retries: 10
+  k8s_facts:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    api_version: v1
+    kind: Secret
+    namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+    name: "x509.local.cluster.svc.{{ K8S_NAMESPACE_PREFIX }}infra0000.proxy"
+
 - name: deployed Squid
   k8s:
     kubeconfig: "{{ k8s_kubeconfig }}"
@@ -64,6 +103,9 @@
               name: cache
             - emptyDir: {}
               name: log
+            - secret:
+                secretName: "x509.local.cluster.svc.{{ K8S_NAMESPACE_PREFIX }}infra0000.proxy"
+              name: x509
             initContainers:
             - name: clean-state
               image: busybox
@@ -138,3 +180,5 @@
                 name: cache
               - mountPath: /var/log/squid
                 name: log
+              - mountPath: /etc/squid/certs
+                name: x509
