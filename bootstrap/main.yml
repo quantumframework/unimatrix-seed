@@ -29,6 +29,7 @@
   - include_tasks: ../ops/ansible/includes/facts.yml
   - include_tasks: ../bootstrap/includes/namespaces.yml
   - include_tasks: ../bootstrap/includes/x509.yml
+  - include_tasks: ../bootstrap/includes/environ.yml
   - include_tasks: ../bootstrap/includes/psp.yml
   - include_tasks: ../bootstrap/includes/sa.yml
   - name: run common manifests

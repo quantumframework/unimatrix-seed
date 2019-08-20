@@ -1,0 +1,24 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster.environ.common
+  namespace: "{{ ns.metadata.name }}"
+data:
+{% if http_use_proxy|default(False) %}
+  http_proxy: "http://proxy.{{ K8S_NAMESPACE_PREFIX }}infra0000.svc.cluster.local:3128"
+  https_proxy: "https://proxy.{{ K8S_NAMESPACE_PREFIX }}infra0000.svc.cluster.local:3129"
+{% endif %}
+  DEPLOYMENT_ENV: "{{ deployment_env_name }}"
+{% if http_use_proxy|default(False) %}
+  HTTP_PROXY: "http://proxy.{{ K8S_NAMESPACE_PREFIX }}infra0000.svc.cluster.local:3128"
+  HTTPS_PROXY: "https://proxy.{{ K8S_NAMESPACE_PREFIX }}infra0000.svc.cluster.local:3129"
+{% endif %}
+{% if x509_trusted_issuers %}
+  REQUESTS_CA_BUNDLE: /usr/local/share/ca-bundle.pem
+{% endif %}
+{% if x509_trusted_issuers %}
+  SSL_CERT_DIR: /usr/local/share/ca-certificates
+  SSL_CERT_FILE: /usr/local/share/ca-bundle.pem
+{% endif %}
+  UNIMATRIX_CLUSTER_NAME: "{{ k8s_cluster_name }}"

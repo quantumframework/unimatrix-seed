@@ -1,0 +1,10 @@
+---
+- name: create a ConfigMap holding the common cluster environment variables
+  with_items: "{{ k8s_namespaces }}"
+  loop_control:
+    loop_var: ns
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    force: true
+    definition: "{{ lookup('template', 'templates/configmap.cluster.environ.common.yml.j2') }}"
