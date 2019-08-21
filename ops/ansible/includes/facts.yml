@@ -80,3 +80,11 @@
   set_fact:
     logstash_memory: 1Gi
 
+
+- when: cluster_dmz_namespaces is not defined
+  set_fact:
+    cluster_dmz_namespaces: []
+
+- when: cluster_ingress_controllers is not defined
+  set_fact:
+    cluster_ingress_controllers: []
