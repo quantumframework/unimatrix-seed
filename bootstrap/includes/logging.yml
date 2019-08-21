@@ -1,4 +1,19 @@
 ---
+- name: create ConfigMap with Logstash configuration files
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    force: true
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: logstash.config.settings
+        namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+      data:
+        logstash.yml: |-
+          http.host: "0.0.0.0"
+
 - name: find pipelines
   register: result
   find:
@@ -87,6 +102,10 @@
               name: ca-bundle
             - configMap:
                 defaultMode: 420
+                name: logstash.config.settings
+              name: settings
+            - configMap:
+                defaultMode: 420
                 name: logstash.config.pipelines
               name: pipelines
             - configMap:
@@ -97,9 +116,11 @@
               name: data
             - emptyDir: {}
               name: tmp
+            - emptyDir: {}
+              name: var
             containers:
             - name: logstash
-              image: docker.elastic.co/logstash/logstash:7.0.0-alpha2
+              image: docker.elastic.co/logstash/logstash:7.3.0
               imagePullPolicy: Always
               securityContext:
                 allowPrivilegeEscalation: false
@@ -107,6 +128,9 @@
                   drop:
                   - ALL
                 privileged: false
+
+                # TODO: Find out which paths Logstash needs write
+                # access to.
                 readOnlyRootFilesystem: true
               ports:
               - name: ipfix
@@ -133,16 +157,22 @@
                 name: ca-bundle
                 readOnly: true
                 subPath: ca-bundle.pem
+              - mountPath: /usr/share/logstash/config/logstash.yml
+                name: settings
+                readOnly: true
+                subPath: logstash.yml
               - mountPath: /usr/share/logstash/pipeline
                 name: pipelines
                 readOnly: true
               - mountPath: /usr/share/logstash/patterns
                 name: patterns
                 readOnly: true
-              - mountPath: /usr/share/logstash/data/
+              - mountPath: /usr/share/logstash/data
                 name: data
               - mountPath: /tmp
                 name: tmp
+              - mountPath: /var/lib/logstash
+                name: var
 
 - name: deploy Logstash service
   k8s:
