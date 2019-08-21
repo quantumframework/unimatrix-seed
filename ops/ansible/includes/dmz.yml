@@ -1,0 +1,15 @@
+---
+- name: "created DMZ {{ K8S_NAMESPACE_PREFIX }}{{ dmz.name|mandatory }}"
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        labels:
+          app.kubernetes.io/name: "{{ K8S_NAMESPACE_PREFIX }}{{ dmz.name|mandatory }}"
+          app.kubernetes.io/part-of: dmz
+          net.unimatrixone.io/allow-cluster-api: "true"
+          net.unimatrixone.io/isdmz: "true"
+        name: "{{ K8S_NAMESPACE_PREFIX }}{{ dmz.name|mandatory }}"
