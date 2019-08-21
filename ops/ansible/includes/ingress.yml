@@ -22,3 +22,68 @@
           app.kubernetes.io/part-of: ingress-nginx-lb0000
           ops.unimatrixone.io/env: testing
           ops.unimatrixone.io/unbound: "false"
+
+- name: created Role allowing access to shared ingress-nginx resources
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    force: true
+    definition:
+      apiVersion: rbac.authorization.k8s.io/v1beta1
+      kind: Role
+      metadata:
+        namespace: kube-public
+        name: unimatrix:ingress-nginx
+        labels:
+          app.kubernetes.io/part-of: ingress-nginx
+          app.kubernetes.io/component: iam
+        annotations: {}
+      rules:
+      - apiGroups:
+        - ''
+        resources:
+        - configmaps
+        resourceNames:
+        - ingress-nginx.config.common
+        - cluster.environ.common
+        verbs:
+        - list
+        - watch
+        - get
+
+- name: collect all service accounts used by ingress-nginx deployments
+  register: result
+  k8s_facts:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    kind: ServiceAccount
+    label_selectors:
+    - "app.kubernetes.io/component = iam"
+    - "app.kubernetes.io/part-of = ingress-nginx"
+
+- name: grant all service accounts access to the shared resources
+  with_items: "{{ result.resources }}"
+  loop_control:
+    loop_var: sa
+  vars:
+    name: "unimatrix:ingress-nginx:{{ sa.metadata.namespace }}:{{ sa.metadata.name }}"
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    force: true
+    definition:
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: RoleBinding
+      metadata:
+        name: "{{ name }}"
+        namespace: kube-public
+        labels:
+          app.kubernetes.io/part-of: ingress-nginx
+          app.kubernetes.io/component: iam
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: Role
+        name: nginx-ingress
+      subjects:
+      - kind: ServiceAccount
+        namespace: "{{ sa.metadata.namespace }}"
+        name: "{{ sa.metadata.name }}"
