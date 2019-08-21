@@ -1,0 +1,24 @@
+---
+- name: created common ingress-nginx configuration
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    force: true
+    definition:
+      apiVersion: v1
+      data:
+        log-format-upstream: >-
+          $remote_addr - [$the_real_ip] - $remote_user [$time_local]
+          "$request" $status $bytes_sent "$http_referer" "$http_user_agent"
+          $request_length $request_time
+          $upstream_response_length $upstream_response_time $upstream_status
+          $req_id $namespace $ingress_name $service_name $service_port
+      kind: ConfigMap
+      metadata:
+        name: ingress-nginx.config.common
+        namespace: kube-public
+        labels:
+          app.kubernetes.io/name: lb0000.config.nginx
+          app.kubernetes.io/part-of: ingress-nginx-lb0000
+          ops.unimatrixone.io/env: testing
+          ops.unimatrixone.io/unbound: "false"
