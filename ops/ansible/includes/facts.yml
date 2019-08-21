@@ -48,6 +48,10 @@
   set_fact:
     http_proxy_enabled: true
 
+- when: http_proxy_whitelist is not defined
+  set_fact:
+    http_proxy_whitelist: []
+
 - when: http_proxy_replicas is not defined
   set_fact:
     http_proxy_replicas: 3
