@@ -87,3 +87,69 @@
       - kind: ServiceAccount
         namespace: "{{ sa.metadata.namespace }}"
         name: "{{ sa.metadata.name }}"
+
+- name: created ClusterRole for ingress-nginx service accounts
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    force: true
+    definition:
+      apiVersion: rbac.authorization.k8s.io/v1beta1
+      kind: ClusterRole
+      metadata:
+        name: ingress-nginx
+      rules:
+      - apiGroups:
+        - ''
+        resources:
+        - configmaps
+        - endpoints
+        - nodes
+        - pods
+        - secrets
+        verbs:
+        - list
+        - watch
+      - apiGroups:
+        - ''
+        resources:
+        - nodes
+        verbs:
+        - get
+      - apiGroups:
+        - ''
+        resources:
+        - services
+        verbs:
+        - get
+        - list
+        - watch
+      - apiGroups:
+        - extensions
+        resources:
+        - ingresses
+        verbs:
+        - get
+        - list
+        - watch
+      - apiGroups:
+        - ''
+        resources:
+        - events
+        verbs:
+        - create
+        - patch
+      - apiGroups:
+        - extensions
+        resources:
+        - ingresses/status
+        verbs:
+        - update
+      - apiGroups:
+        - policy
+        resources:
+        - podsecuritypolicies
+        verbs:
+        - use
+        resourceNames:
+        - unimatrix.ingress-nginx
