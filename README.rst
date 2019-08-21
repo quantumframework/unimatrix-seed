@@ -71,6 +71,32 @@ shows an example of such a configuration file.
   :language: yaml
 
 
+How-to
+======
+
+Import cluster trusted CAs into Java keystore
+---------------------------------------------
+Augment your ``docker-entrypoint`` with the following snippet:
+
+.. code:: bash
+
+  if ls ${CERTS_DIR}/*.pem 1> /dev/null 2>&1; then
+    for fn in ${CERTS_DIR}/*.pem; do
+      crt="${fn##*/}"
+      keytool -keystore $TRUSTSTORE_PATH\
+        -import -alias $crt\
+        -file "$CERTS_DIR/$crt"\
+        -storepass $TRUSTSTORE_PASSWORD\
+        -keypass $TRUSTSTORE_PASSWORD\
+        -noprompt
+    done
+  else
+    export TRUSTSTORE_PATH="${JAVA_HOME}/jre/lib/security/cacerts"
+  fi
+
+Note that this example assumes that you have set the ``JAVA_HOME``
+environment variable.
+
 Appendix A: Logstash port allocation
 ====================================
 
