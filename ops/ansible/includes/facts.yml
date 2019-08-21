@@ -74,5 +74,5 @@
 
 - when: logstash_memory is not defined
   set_fact:
-    logstash_memory: 256Mi
+    logstash_memory: 1024Mi
 
