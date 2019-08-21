@@ -1,0 +1,338 @@
+---
+- name: find pipelines
+  register: result
+  find:
+    paths: "{{ logstash_pipelines_dir }}"
+    patterns: "*.conf"
+
+- set_fact:
+    logstash_pipelines: "{{ result.files }}"
+
+- name: create ConfigMap with Logstash pipelines
+  vars:
+    namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    force: true
+    definition: "{{ lookup('template', 'templates/configmap-logstash.config.pipelines.yml.j2') }}"
+
+- name: find patterns
+  register: result
+  find:
+    paths: "{{ logstash_patterns_dir }}"
+    patterns: "*"
+
+- set_fact:
+    logstash_patterns: "{{ result.files }}"
+
+- name: create ConfigMap with Logstash Grok patterns
+  vars:
+    namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    force: true
+    definition: "{{ lookup('template', 'templates/configmap-logstash.config.patterns.yml.j2') }}"
+
+- name: deployed Logstash
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    force: true
+    definition:
+      apiVersion: apps/v1beta1
+      kind: Deployment
+      metadata:
+        name: logstash
+        namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+        labels:
+          app.kubernetes.io/name: logstash
+          app.kubernetes.io/part-of: logging
+          app.kubernetes.io/component: ingest
+      spec:
+        replicas: "{{ logstash_replicas }}"
+        selector:
+          matchLabels: &LOGSTASH_LABELS
+            app.kubernetes.io/name: logstash
+            app.kubernetes.io/part-of: logging
+            app.kubernetes.io/component: ingest
+        template:
+          metadata:
+            labels: *LOGSTASH_LABELS
+          spec:
+            automountServiceAccountToken: false
+            securityContext:
+              fsGroup: 1000
+              runAsGroup: 1000
+              runAsUser: 1000
+            affinity:
+              podAntiAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchExpressions:
+                    - key: app.kubernetes.io/name
+                      operator: In
+                      values:
+                      - logstash
+                  topologyKey: kubernetes.io/hostname
+            volumes:
+            - configMap:
+                defaultMode: 420
+                name: x509.ca.trusted
+              name: ca-certificates
+            - configMap:
+                defaultMode: 420
+                name: x509.ca.bundle
+              name: ca-bundle
+            - configMap:
+                defaultMode: 420
+                name: logstash.config.pipelines
+              name: pipelines
+            - configMap:
+                defaultMode: 420
+                name: logstash.config.patterns
+              name: patterns
+            - emptyDir: {}
+              name: data
+            containers:
+            - name: logstash
+              image: docker.elastic.co/logstash/logstash:7.0.0-alpha2
+              imagePullPolicy: Always
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                  - ALL
+                privileged: false
+
+                # TODO: find out which directories Logstash needs
+                # to write to and mount them as emptyDir() volumes.
+                readOnlyRootFilesystem: false
+              ports:
+              - name: ipfix
+                containerPort: 2055
+              - name: filebeat
+                containerPort: 5044
+              - name: logstash
+                containerPort: 9000
+              resources:
+                limits:
+                  cpu: "{{ logstash_cpu }}"
+                  memory: "{{ logstash_memory }}"
+                requests:
+                  cpu: "{{ logstash_cpu }}"
+                  memory: "{{ logstash_memory }}"
+              envFrom:
+              - configMapRef:
+                  name: cluster.environ.common
+              volumeMounts:
+              - mountPath: /usr/local/share/ca-certificates
+                name: ca-certificates
+                readOnly: true
+              - mountPath: /usr/local/share/ca-bundle.pem
+                name: ca-bundle
+                readOnly: true
+                subPath: ca-bundle.pem
+              - mountPath: /usr/share/logstash/pipeline
+                name: pipelines
+                readOnly: true
+              - mountPath: /usr/share/logstash/patterns
+                name: patterns
+                readOnly: true
+
+- name: deploy Logstash service
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    definition:
+      kind: Service
+      apiVersion: v1
+      metadata:
+        namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+        name: logstash
+      spec:
+        selector:
+          app.kubernetes.io/name: logstash
+        ports:
+        - protocol: TCP
+          port: 5044
+          targetPort: 5044
+          name: filebeat
+        - protocol: TCP
+          port: 9600
+          targetPort: 9600
+          name: logstash
+
+#- name: configured Filebeat
+#  k8s:
+#    kubeconfig: "{{ k8s_kubeconfig }}"
+#    state: present
+#    force: true
+#    definition:
+#      apiVersion: v1
+#      kind: ConfigMap
+#      metadata:
+#        name: filebeat.config.logstash
+#        namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+#        labels:
+#          app.kubernetes.io/name: filebeat.config.logstash
+#          app.kubernetes.io/part-of: logging
+#          app.kubernetes.io/component: beats
+#      data:
+#        filebeat.yml: |-
+#          filebeat.inputs:
+#          - type: container
+#            paths:
+#              - /var/log/containers/*.log
+#            processors:
+#              - add_kubernetes_metadata:
+#                  in_cluster: true
+#                  host: ${NODE_NAME}
+#                  matchers:
+#                  - logs_path:
+#                      logs_path: "/var/log/containers/"
+#          processors:
+#            - add_cloud_metadata:
+#            - add_host_metadata:
+#          output.logstash:
+#            hosts: ["logstash:5044"]
+#
+#- name: configured ClusterRoleBinding for Filebeat
+#  k8s:
+#    kubeconfig: "{{ k8s_kubeconfig }}"
+#    state: present
+#    force: true
+#    definition:
+#      apiVersion: rbac.authorization.k8s.io/v1beta1
+#      kind: ClusterRoleBinding
+#      metadata:
+#        name: filebeat
+#        labels:
+#          app.kubernetes.io/name: filebeat
+#          app.kubernetes.io/part-of: logging
+#          app.kubernetes.io/component: beats
+#      subjects:
+#      - kind: ServiceAccount
+#        name: filebeat
+#        namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+#      roleRef:
+#        kind: ClusterRole
+#        name: filebeat
+#        apiGroup: rbac.authorization.k8s.io
+#
+#- name: configured ClusterRole for Filebeat
+#  k8s:
+#    kubeconfig: "{{ k8s_kubeconfig }}"
+#    state: present
+#    force: true
+#    definition:
+#      apiVersion: rbac.authorization.k8s.io/v1beta1
+#      kind: ClusterRole
+#      metadata:
+#        name: filebeat
+#        labels:
+#          app.kubernetes.io/name: filebeat
+#          app.kubernetes.io/part-of: logging
+#          app.kubernetes.io/component: beats
+#      rules:
+#      - apiGroups: [""]
+#        resources:
+#        - namespaces
+#        - pods
+#        verbs:
+#        - get
+#        - watch
+#        - list
+#
+#- name: configured ServiceAccount for Filebeat
+#  k8s:
+#    kubeconfig: "{{ k8s_kubeconfig }}"
+#    state: present
+#    definition:
+#      apiVersion: v1
+#      kind: ServiceAccount
+#      metadata:
+#        name: filebeat
+#        namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+#        labels:
+#          app.kubernetes.io/name: filebeat
+#          app.kubernetes.io/part-of: logging
+#          app.kubernetes.io/component: beats
+#
+#- name: deployed Filebeat as DaemonSet
+#  k8s:
+#    kubeconfig: "{{ k8s_kubeconfig }}"
+#    state: present
+#    definition:
+#      apiVersion: extensions/v1beta1
+#      kind: DaemonSet
+#      metadata:
+#        name: filebeat
+#        namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+#        labels:
+#          app.kubernetes.io/name: filebeat
+#          app.kubernetes.io/part-of: logging
+#          app.kubernetes.io/component: beats
+#      spec:
+#        selector:
+#          matchLabels: &FILEBEAT_LABELS
+#            app.kubernetes.io/name: filebeat
+#            app.kubernetes.io/part-of: logging
+#            app.kubernetes.io/component: beats
+#        template:
+#          metadata:
+#            labels: *FILEBEAT_LABELS
+#          spec:
+#            serviceAccountName: filebeat
+#            terminationGracePeriodSeconds: 30
+#            hostNetwork: false
+#            dnsPolicy: ClusterFirstWithHostNet
+#            containers:
+#            - name: filebeat
+#              image: docker.elastic.co/beats/filebeat:7.3.0
+#              args:
+#              - "-c"
+#              - "/etc/filebeat.yml"
+#              - "-e"
+#              env:
+#              - name: NODE_NAME
+#                valueFrom:
+#                  fieldRef:
+#                    fieldPath: spec.nodeName
+#              securityContext:
+#                runAsUser: 0
+#              resources:
+#                limits:
+#                  memory: 200Mi
+#                requests:
+#                  cpu: 100m
+#                  memory: 100Mi
+#              volumeMounts:
+#              - name: config
+#                mountPath: /etc/filebeat.yml
+#                readOnly: true
+#                subPath: filebeat.yml
+#              - name: data
+#                mountPath: /usr/share/filebeat/data
+#              - name: docker
+#                mountPath: /var/lib/docker/containers
+#                readOnly: true
+#              - name: log
+#                mountPath: /var/log
+#                readOnly: true
+#            volumes:
+#            - name: config
+#              configMap:
+#                defaultMode: 0600
+#                name: filebeat.config.logstash
+#            - name: docker
+#              hostPath:
+#                path: /var/lib/docker/containers
+#            - name: log
+#              hostPath:
+#                path: /var/log
+#            - name: data
+#              hostPath:
+#                path: /var/lib/filebeat-data
+#                type: DirectoryOrCreate

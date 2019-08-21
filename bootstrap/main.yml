@@ -30,6 +30,10 @@
   - include_tasks: ../bootstrap/includes/namespaces.yml
   - include_tasks: ../bootstrap/includes/x509.yml
   - include_tasks: ../bootstrap/includes/environ.yml
+  - include_tasks: ../bootstrap/includes/logging.yml
+    vars:
+      logstash_pipelines_dir: ../etc/logstash/pipeline
+      logstash_patterns_dir: ../etc/logstash/patterns
   - include_tasks: ../bootstrap/includes/proxy.yml
     when: http_proxy_enabled
   - include_tasks: ../bootstrap/includes/psp.yml

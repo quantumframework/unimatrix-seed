@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash.config.patterns
+  namespace: "{{ namespace }}"
+{% if logstash_patterns|default(None) %}
+data:
+  {% for fp in logstash_patterns %}{{ fp.path|basename }}: |
+    {{ lookup('file', fp.path)|indent(4) }}
+  {% endfor %}
+{%- else %}
+data: {}
+{%- endif %}
+

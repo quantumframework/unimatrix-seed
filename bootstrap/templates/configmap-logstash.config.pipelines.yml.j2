@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash.config.pipelines
+  namespace: "{{ namespace }}"
+{% if logstash_pipelines|default(None) %}
+data:
+  {% for fp in logstash_pipelines %}{{ fp.path|basename }}: |
+    {{ lookup('file', fp.path)|indent(4) }}
+  {% endfor %}
+{%- else %}
+data: {}
+{%- endif %}
