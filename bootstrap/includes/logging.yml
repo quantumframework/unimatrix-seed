@@ -95,6 +95,8 @@
               name: patterns
             - emptyDir: {}
               name: data
+            - emptyDir: {}
+              name: tmp
             containers:
             - name: logstash
               image: docker.elastic.co/logstash/logstash:7.0.0-alpha2
@@ -105,10 +107,7 @@
                   drop:
                   - ALL
                 privileged: false
-
-                # TODO: find out which directories Logstash needs
-                # to write to and mount them as emptyDir() volumes.
-                readOnlyRootFilesystem: false
+                readOnlyRootFilesystem: true
               ports:
               - name: ipfix
                 containerPort: 2055
@@ -140,6 +139,10 @@
               - mountPath: /usr/share/logstash/patterns
                 name: patterns
                 readOnly: true
+              - mountPath: /usr/share/logstash/data/
+                name: data
+              - mountPath: /tmp
+                name: tmp
 
 - name: deploy Logstash service
   k8s:

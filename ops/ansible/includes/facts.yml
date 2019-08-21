@@ -74,7 +74,7 @@
 
 - when: logstash_cpu is not defined
   set_fact:
-    logstash_cpu: 250m
+    logstash_cpu: 500m
 
 - when: logstash_memory is not defined
   set_fact:
