@@ -18,10 +18,8 @@
         name: ingress-nginx.config.common
         namespace: kube-public
         labels:
-          app.kubernetes.io/name: lb0000.config.nginx
-          app.kubernetes.io/part-of: ingress-nginx-lb0000
-          ops.unimatrixone.io/env: testing
-          ops.unimatrixone.io/unbound: "false"
+          app.kubernetes.io/name: ingress-nginx.config.common
+          app.kubernetes.io/part-of: ingress-nginx
 
 - name: created Role allowing access to shared ingress-nginx resources
   k8s:
@@ -51,6 +49,24 @@
         - watch
         - get
 
+- name: create service accounts for ingress load balancers
+  with_items: "{{ cluster_ingress_loadbalancers }}"
+  loop_control:
+    loop_var: lb
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: "{{ lb.name }}"
+        namespace: "{{ K8S_NAMESPACE_PREFIX }}{{ lb.dmz }}"
+        labels:
+          app.kubernetes.io/name: "{{ lb.name }}"
+          app.kubernetes.io/component: iam
+          app.kubernetes.io/part-of: ingress-nginx
+
 - name: collect all service accounts used by ingress-nginx deployments
   register: result
   k8s_facts:
@@ -59,6 +75,9 @@
     label_selectors:
     - "app.kubernetes.io/component = iam"
     - "app.kubernetes.io/part-of = ingress-nginx"
+
+- set_fact:
+    cluster_ingress_service_accounts: "{{ result.resources }}"
 
 - name: grant all service accounts access to the shared resources
   with_items: "{{ result.resources }}"
@@ -82,7 +101,7 @@
       roleRef:
         apiGroup: rbac.authorization.k8s.io
         kind: Role
-        name: nginx-ingress
+        name: unimatrix:ingress-nginx
       subjects:
       - kind: ServiceAccount
         namespace: "{{ sa.metadata.namespace }}"
@@ -153,3 +172,293 @@
         - use
         resourceNames:
         - unimatrix.ingress-nginx
+
+- name: created ingress-nginx instance roles
+  with_items: "{{ cluster_ingress_loadbalancers }}"
+  loop_control:
+    loop_var: lb
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    force: true
+    definition:
+      apiVersion: rbac.authorization.k8s.io/v1beta1
+      kind: Role
+      metadata:
+        name: "unimatrix:ingress-nginx:{{ lb.name }}"
+        namespace: "{{ K8S_NAMESPACE_PREFIX }}{{ lb.dmz }}"
+        labels:
+          app.kubernetes.io/part-of: ingress-nginx
+      rules:
+      - apiGroups:
+        - ''
+        resources:
+        - configmaps
+        - pods
+        - secrets
+        - namespaces
+        verbs:
+        - get
+      - apiGroups:
+        - ''
+        resources:
+        - configmaps
+        resourceNames:
+        - "{{ lb.dmz }}-{{ lb.name }}-{{ lb.name }}"
+        verbs:
+        - get
+        - update
+      - apiGroups:
+        - ''
+        resources:
+        - configmaps
+        verbs:
+        - create
+      - apiGroups:
+        - ''
+        resources:
+        - endpoints
+        verbs:
+        - get
+
+- name: assigned ingress-nginx instance roles
+  with_items: "{{ cluster_ingress_loadbalancers }}"
+  loop_control:
+    loop_var: lb
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    force: true
+    definition:
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: RoleBinding
+      metadata:
+        name: "unimatrix:ingress-nginx:{{ lb.name }}:{{ lb.name }}"
+        namespace: '{{ K8S_NAMESPACE_PREFIX }}{{ lb.dmz }}'
+        labels:
+          app.kubernetes.io/part-of: ingress-nginx
+      subjects:
+      - kind: ServiceAccount
+        name: "{{ lb.name }}"
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: Role
+        name: "unimatrix:ingress-nginx:{{ lb.name }}"
+
+- name: grant ingress-nginx role to all load balancer service accounts
+  with_items: "{{ cluster_ingress_service_accounts }}"
+  loop_control:
+    loop_var: sa
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    force: true
+    definition:
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: RoleBinding
+      metadata:
+        name: "unimatrix:ingress-nginx:common:{{ sa.metadata.name }}"
+        namespace: "{{ sa.metadata.namespace }}"
+        labels:
+          app.kubernetes.io/name: "{{ sa.metadata.name }}"
+          app.kubernetes.io/part-of: ingress-nginx
+        annotations: {}
+      subjects:
+      - kind: ServiceAccount
+        name: "{{ sa.metadata.name }}"
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: ClusterRole
+        name: ingress-nginx
+
+- name: created default TCP configuration
+  with_items: "{{ cluster_ingress_loadbalancers }}"
+  loop_control:
+    loop_var: lb
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: "{{ lb.name }}.config.tcp"
+        namespace: '{{ K8S_NAMESPACE_PREFIX }}{{ lb.dmz }}'
+        labels:
+          app.kubernetes.io/component: "config"
+          app.kubernetes.io/instance: "{{ lb.name }}"
+          app.kubernetes.io/part-of: ingress-nginx
+        annotations: {}
+
+- name: created default UDP configuration
+  with_items: "{{ cluster_ingress_loadbalancers }}"
+  loop_control:
+    loop_var: lb
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: "{{ lb.name }}.config.udp"
+        namespace: '{{ K8S_NAMESPACE_PREFIX }}{{ lb.dmz }}'
+        labels:
+          app.kubernetes.io/component: "config"
+          app.kubernetes.io/instance: "{{ lb.name }}"
+          app.kubernetes.io/part-of: ingress-nginx
+        annotations: {}
+
+- name: deployed ingress-nginx
+  with_items: "{{ cluster_ingress_loadbalancers }}"
+  loop_control:
+    loop_var: lb
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: "{{ lb.name }}"
+        namespace: '{{ K8S_NAMESPACE_PREFIX }}{{ lb.dmz }}'
+        labels:
+          app.kubernetes.io/name: "{{ lb.name }}"
+          app.kubernetes.io/part-of: ingress-nginx
+        annotations: {}
+      spec:
+        replicas: 1
+        selector:
+          matchLabels: &INGRESS_NGINX_LABELS
+            app.kubernetes.io/name: "{{ lb.name }}"
+            app.kubernetes.io/part-of: ingress-nginx
+        template:
+          metadata:
+            annotations:
+              prometheus.io/port: "10254"
+              prometheus.io/scrape: "true"
+            labels: *INGRESS_NGINX_LABELS
+          spec:
+            automountServiceAccountToken: true
+            serviceAccountName: "{{ lb.name }}"
+            containers:
+            - image: quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.24.1
+              name: ingress-nginx
+              args:
+              - /nginx-ingress-controller
+              - --configmap=$(NGINX_CONFIGMAP_NAME)
+              - --tcp-services-configmap=$(POD_NAMESPACE)/$(TCP_CONFIGMAP_NAME)
+              - --udp-services-configmap=$(POD_NAMESPACE)/$(UDP_CONFIGMAP_NAME)
+              - --publish-service=$(POD_NAMESPACE)/$(SERVICE_NAME)
+              - --annotations-prefix=nginx.ingress.kubernetes.io
+
+              # From the documentation:
+              #
+              #   This mechanism also provides users the abilita to run
+              #   multiple NGINX ingress controllers (e.g. one which serves
+              #   public traffic, one which serves "internal" traffic). To
+              #   do this, the option --ingress-class must be changed to a
+              #   value unique for the cluster within the definition of the
+              #   replication controller.
+              #
+              # However, since the Unimatrix model restricts ingress-nginx
+              # instances (they can only lookup Ingress resources in their
+              # own namespace), just the name of the ingress controller may
+              # be considered unique.
+              - "--watch-namespace={{ K8S_NAMESPACE_PREFIX }}{{ lb.dmz }}"
+              - "--ingress-class={{ lb.name }}"
+              - "--election-id={{ lb.dmz }}-{{ lb.name }}"
+              env:
+              - name: POD_NAMESPACE
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.namespace
+              - name: POD_NAME
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.name
+              - name: NGINX_CONFIGMAP_NAME
+                value: kube-public/ingress-nginx.config.common
+              - name: TCP_CONFIGMAP_NAME
+                value: "{{ lb.name }}.config.tcp"
+              - name: UDP_CONFIGMAP_NAME
+                value: "{{ lb.name }}.config.udp"
+              - name: SERVICE_NAME
+                value: "{{ lb.name }}"
+              ports:
+              - containerPort: 80
+                name: http
+                protocol: TCP
+              - containerPort: 443
+                name: https
+                protocol: TCP
+              - containerPort: 10254
+                name: prometheus
+                protocol: TCP
+              livenessProbe:
+                failureThreshold: 1
+                httpGet:
+                  path: /healthz
+                  port: 10254
+                  scheme: HTTP
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 10
+              readynessProbe:
+                failureThreshold: 1
+                httpGet:
+                  path: /healthz
+                  port: 10254
+                  scheme: HTTP
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 10
+              securityContext:
+                allowPrivilegeEscalation: true
+                capabilities:
+                  add:
+                  - NET_BIND_SERVICE
+                  drop:
+                  - ALL
+                runAsUser: 33
+              resources:
+                limits:
+                  cpu: 250m
+                  memory: 512Mi
+                requests:
+                  cpu: 250m
+                  memory: 512Mi
+
+- name: create ingress load balancers
+  with_items: "{{ cluster_ingress_loadbalancers }}"
+  loop_control:
+    loop_var: lb
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: "{{ lb.name }}"
+        namespace: '{{ K8S_NAMESPACE_PREFIX }}{{ lb.dmz }}'
+        labels:
+          app.kubernetes.io/name: "{{ lb.name }}"
+          app.kubernetes.io/component: loadbalancer
+          app.kubernetes.io/part-of: ingress-nginx
+        annotations:
+          cloud.google.com/load-balancer-type: Internal
+          service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+      spec:
+        type: LoadBalancer
+        externalTrafficPolicy: Local
+        ports:
+        - name: http
+          port: 443
+          protocol: TCP
+        loadBalancerIP: "{{ lb.loadbalancer_ip|mandatory }}"
+        selector:
+          app.kubernetes.io/name: "{{ lb.name }}"
+          app.kubernetes.io/part-of: ingress-nginx

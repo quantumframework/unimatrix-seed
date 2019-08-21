@@ -27,6 +27,10 @@
   tasks:
   - include_tasks: ../bootstrap/includes/prerequisites.yml
   - include_tasks: ../ops/ansible/includes/facts.yml
+  - include_tasks: ../ops/ansible/includes/dmz.yml
+    with_items: "{{ cluster_dmz_namespaces }}"
+    loop_control:
+      loop_var: dmz
   - include_tasks: ../ops/ansible/includes/ingress.yml
   - include_tasks: ../bootstrap/includes/namespaces.yml
   - include_tasks: ../bootstrap/includes/x509.yml
