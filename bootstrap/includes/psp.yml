@@ -11,6 +11,7 @@
         name: unimatrix.default
         labels:
           app.kubernetes.io/name: unimatrix.default
+          ops.unimatrixone.io/env: cluster
         annotations:
           seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'docker/default'
           apparmor.security.beta.kubernetes.io/allowedProfileNames: 'runtime/default'
@@ -52,8 +53,9 @@
       apiVersion: policy/v1beta1
       kind: PodSecurityPolicy
       metadata:
-        #name: unimatrix.any
-        name: unimatrix.default
+        name: unimatrix.any
+        labels:
+          ops.unimatrixone.io/env: cluster
         annotations:
           seccomp.security.alpha.kubernetes.io/allowedProfileNames: '*'
       spec:
@@ -87,7 +89,9 @@
       apiVersion: rbac.authorization.k8s.io/v1
       kind: ClusterRole
       metadata:
-        name: unimatrix.psp.any
+        name: unimatrix:psp:any
+        labels:
+          ops.unimatrixone.io/env: cluster
       rules:
       - apiGroups:
         - policy
@@ -105,7 +109,9 @@
       apiVersion: rbac.authorization.k8s.io/v1
       kind: ClusterRole
       metadata:
-        name: unimatrix.psp.default
+        name: unimatrix:psp:default
+        labels:
+          ops.unimatrixone.io/env: cluster
       rules:
       - apiGroups:
         - policy
@@ -125,15 +131,17 @@
       kind: ClusterRoleBinding
       apiVersion: rbac.authorization.k8s.io/v1
       metadata:
-        name: unimatrix.psp.default
+        name: unimatrix:psp:default
+        labels:
+          ops.unimatrixone.io/env: cluster
       subjects:
-      - kind: Group
-        name: system:serviceaccounts
-        apiGroup: rbac.authorization.k8s.io
+      - kind: ServiceAccount
+        namespace: unimatrix-system
+        name: queen
       - kind: Group
         apiGroup: rbac.authorization.k8s.io
         name: system:authenticated
       roleRef:
         kind: ClusterRole
-        name: unimatrix.psp.default
+        name: unimatrix:psp:default
         apiGroup: rbac.authorization.k8s.io

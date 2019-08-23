@@ -9,7 +9,6 @@ data:
   http_proxy: "http://proxy.{{ K8S_NAMESPACE_PREFIX }}infra0000.svc.cluster.local:3128"
   https_proxy: "http://proxy.{{ K8S_NAMESPACE_PREFIX }}infra0000.svc.cluster.local:3128"
 {% endif %}
-  DEPLOYMENT_ENV: "{{ deployment_env_name }}"
 {% if http_use_proxy|default(False) %}
   HTTP_PROXY: "http://proxy.{{ K8S_NAMESPACE_PREFIX }}infra0000.svc.cluster.local:3128"
   HTTPS_PROXY: "http://proxy.{{ K8S_NAMESPACE_PREFIX }}infra0000.svc.cluster.local:3128"

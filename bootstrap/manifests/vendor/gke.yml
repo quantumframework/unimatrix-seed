@@ -2,7 +2,9 @@
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
-  name: "quantum.rdbms"
+  name: "unimatrix.rdbms"
+  labels:
+    ops.unimatrixone.io/env: cluster
 provisioner: "kubernetes.io/gce-pd"
 allowVolumeExpansion: true
 reclaimPolicy: Retain
@@ -13,7 +15,9 @@ parameters:
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
-  name: "quantum.faster"
+  name: "unimatrix.faster"
+  labels:
+    ops.unimatrixone.io/env: cluster
 provisioner: "kubernetes.io/gce-pd"
 allowVolumeExpansion: false
 reclaimPolicy: Delete
@@ -24,7 +28,9 @@ parameters:
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
-  name: "quantum.highio"
+  name: "unimatrix.highio"
+  labels:
+    ops.unimatrixone.io/env: cluster
 provisioner: "kubernetes.io/gce-pd"
 allowVolumeExpansion: false
 reclaimPolicy: Delete
@@ -36,7 +42,9 @@ parameters:
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
-  name: "quantum.expandable"
+  name: "unimatrix.expandable"
+  labels:
+    ops.unimatrixone.io/env: cluster
 provisioner: "kubernetes.io/gce-pd"
 allowVolumeExpansion: true
 reclaimPolicy: Delete
@@ -44,11 +52,14 @@ parameters:
   type: pd-standard
 
 ---
-apiVersion: certmanager.k8s.io/v1alpha1
-kind: ClusterIssuer
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
 metadata:
-  name: "default"
-  namespace: "kube-system"
-spec:
-  ca:
-    secretName: "x509.ca.default"
+  name: "unimatrix.expandable.faster"
+  labels:
+    ops.unimatrixone.io/env: cluster
+provisioner: "kubernetes.io/gce-pd"
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+parameters:
+  type: pd-ssd

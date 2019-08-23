@@ -9,7 +9,9 @@
       kind: ConfigMap
       metadata:
         name: logstash.config.settings
-        namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+        namespace: unimatrix-public
+        labels:
+          ops.unimatrixone.io/env: cluster
       data:
         logstash.yml: |-
           http.host: "0.0.0.0"
@@ -25,7 +27,7 @@
 
 - name: create ConfigMap with Logstash pipelines
   vars:
-    namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+    namespace: unimatrix-public
   k8s:
     kubeconfig: "{{ k8s_kubeconfig }}"
     state: present
@@ -43,7 +45,7 @@
 
 - name: create ConfigMap with Logstash Grok patterns
   vars:
-    namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+    namespace: unimatrix-public
   k8s:
     kubeconfig: "{{ k8s_kubeconfig }}"
     state: present
@@ -60,11 +62,12 @@
       kind: Deployment
       metadata:
         name: logstash
-        namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+        namespace: unimatrix-public
         labels:
           app.kubernetes.io/name: logstash
           app.kubernetes.io/part-of: logging
           app.kubernetes.io/component: ingest
+          ops.unimatrixone.io/env: cluster
       spec:
         replicas: "{{ logstash_replicas }}"
         selector:
@@ -72,6 +75,7 @@
             app.kubernetes.io/name: logstash
             app.kubernetes.io/part-of: logging
             app.kubernetes.io/component: ingest
+            ops.unimatrixone.io/env: cluster
         template:
           metadata:
             labels: *LOGSTASH_LABELS
@@ -82,6 +86,14 @@
               runAsGroup: 1000
               runAsUser: 1000
             affinity:
+              nodeAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  nodeSelectorTerms:
+                  - matchExpressions:
+                    - key: ops.unimatrixone.io/env
+                      operator: In
+                      values:
+                      - cluster
               podAntiAffinity:
                 requiredDuringSchedulingIgnoredDuringExecution:
                 - labelSelector:
@@ -182,8 +194,10 @@
       kind: Service
       apiVersion: v1
       metadata:
-        namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+        namespace: unimatrix-public
         name: logstash
+        labels:
+          ops.unimatrixone.io/env: cluster
       spec:
         selector:
           app.kubernetes.io/name: logstash
@@ -207,11 +221,12 @@
       kind: ConfigMap
       metadata:
         name: filebeat.config.logstash
-        namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+        namespace: unimatrix-public
         labels:
           app.kubernetes.io/name: filebeat.config.logstash
           app.kubernetes.io/part-of: logging
           app.kubernetes.io/component: beats
+          ops.unimatrixone.io/env: cluster
       data:
         filebeat.yml: |-
           filebeat.inputs:
@@ -245,10 +260,11 @@
           app.kubernetes.io/name: filebeat
           app.kubernetes.io/part-of: logging
           app.kubernetes.io/component: beats
+          ops.unimatrixone.io/env: cluster
       subjects:
       - kind: ServiceAccount
         name: filebeat
-        namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+        namespace: unimatrix-public
       roleRef:
         kind: ClusterRole
         name: filebeat
@@ -268,6 +284,7 @@
           app.kubernetes.io/name: filebeat
           app.kubernetes.io/part-of: logging
           app.kubernetes.io/component: beats
+          ops.unimatrixone.io/env: cluster
       rules:
       - apiGroups: [""]
         resources:
@@ -287,11 +304,12 @@
       kind: ServiceAccount
       metadata:
         name: filebeat
-        namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+        namespace: unimatrix-public
         labels:
           app.kubernetes.io/name: filebeat
           app.kubernetes.io/part-of: logging
           app.kubernetes.io/component: beats
+          ops.unimatrixone.io/env: cluster
 
 - name: deployed Filebeat as DaemonSet
   k8s:
@@ -302,17 +320,19 @@
       kind: DaemonSet
       metadata:
         name: filebeat
-        namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+        namespace: unimatrix-public
         labels:
           app.kubernetes.io/name: filebeat
           app.kubernetes.io/part-of: logging
           app.kubernetes.io/component: beats
+          ops.unimatrixone.io/env: cluster
       spec:
         selector:
           matchLabels: &FILEBEAT_LABELS
             app.kubernetes.io/name: filebeat
             app.kubernetes.io/part-of: logging
             app.kubernetes.io/component: beats
+            ops.unimatrixone.io/env: cluster
         template:
           metadata:
             labels: *FILEBEAT_LABELS

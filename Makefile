@@ -49,6 +49,14 @@ endif
 	ansible-playbook bootstrap/main.yml $(ANSIBLE_ARGS)
 
 
+bootstrap-cluster:
+ifeq (,$(wildcard env/bin/activate))
+	make env
+endif
+	@source ./env/bin/activate;\
+	ansible-playbook bootstrap/main.yml -e @ops/ansible/vars/cluster.yml $(ARGS)
+
+
 bootstrap-development:
 	make _bootstrap TARGET_DEPLOYMENT_ENV=development
 

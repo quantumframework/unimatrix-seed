@@ -3,7 +3,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: squid.config.whitelist
-  namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+  namespace: unimatrix-public
+  labels:
+    ops.unimatrixone.io/env: cluster
 {% if http_proxy_whitelist %}
 data:
   whitelist.txt: |-

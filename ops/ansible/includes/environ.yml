@@ -7,4 +7,4 @@
     kubeconfig: "{{ k8s_kubeconfig }}"
     state: present
     force: true
-    definition: "{{ lookup('template', 'templates/configmap.cluster.environ.common.yml.j2') }}"
+    definition: "{{ lookup('template', '../templates/resources/configmap.cluster.environ.common.yml.j2') }}"

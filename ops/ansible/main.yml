@@ -12,6 +12,8 @@
   pre_tasks:
   - include_tasks: includes/auth.yml
   - include_tasks: includes/facts.yml
+  - include_tasks: includes/x509.yml
+  - include_tasks: includes/environ.yml
   tasks:
   - include_vars: "defaults/{{ deployment_env_name }}.yml"
   - include_vars: "vars/{{ deployment_env_name }}.yml"

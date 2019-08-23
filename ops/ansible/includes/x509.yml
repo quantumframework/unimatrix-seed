@@ -1,6 +1,15 @@
 ---
+
+- name: lookup namespaces
+  register: result
+  k8s_facts:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    kind: Namespace
+    label_selectors:
+    - "ops.unimatrixone.io/env = {{ target_environment }}"
+
 - set_fact:
-    namespaces: "{{ k8s_namespaces }}"
+    namespaces: "{{ result.resources }}"
     x509_trusted_issuers: false
 
 - name: find certificates
@@ -21,7 +30,7 @@
     kubeconfig: "{{ k8s_kubeconfig }}"
     state: present
     force: true
-    definition: "{{ lookup('template', 'templates/ca-certificates.yml.j2') }}"
+    definition: "{{ lookup('template', '../templates/resources/configmap.ca-certificates.yml.j2') }}"
 
 - name: create ConfigMap holding a bundle of the certificates
   with_items: "{{ namespaces }}"
@@ -31,4 +40,4 @@
     kubeconfig: "{{ k8s_kubeconfig }}"
     state: present
     force: true
-    definition: "{{ lookup('template', 'templates/ca-bundle.yml.j2') }}"
+    definition: "{{ lookup('template', '../templates/resources/configmap.ca-bundle.yml.j2') }}"

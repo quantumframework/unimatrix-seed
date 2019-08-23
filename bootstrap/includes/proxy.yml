@@ -13,25 +13,26 @@
       apiVersion: certmanager.k8s.io/v1alpha1
       kind: Certificate
       metadata:
-        name: "x509.local.cluster.svc.{{ K8S_NAMESPACE_PREFIX }}infra0000.proxy"
-        namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+        name: "x509.local.cluster.svc.unimatrix-public.proxy"
+        namespace: unimatrix-public
         labels:
           app.kubernetes.io/component: pki
-          app.kubernetes.io/name: "x509.local.cluster.svc.{{ K8S_NAMESPACE_PREFIX }}infra0000.proxy"
+          app.kubernetes.io/name: "x509.local.cluster.svc.unimatrix-public.proxy"
           app.kubernetes.io/part-of: proxy
+          ops.unimatrixone.io/env: cluster
         annotations: {}
       spec:
         duration: 2160h
         renewBefore: 360h
-        secretName: "x509.local.cluster.svc.{{ K8S_NAMESPACE_PREFIX }}infra0000.proxy"
+        secretName: "x509.local.cluster.svc.unimatrix-public.proxy"
         issuerRef:
           kind: ClusterIssuer
           name: default
         commonName: "proxy.{{ cluster_base_domain }}"
         dnsNames:
         - proxy
-        - "proxy.{{ K8S_NAMESPACE_PREFIX }}infra0000"
-        - "proxy.{{ K8S_NAMESPACE_PREFIX }}infra0000.svc.cluster.local"
+        - "proxy.unimatrix-public"
+        - "proxy.unimatrix-public.svc.cluster.local"
 
 - name: wait until the private key for the certificate is generated
   register: result
@@ -41,8 +42,8 @@
     kubeconfig: "{{ k8s_kubeconfig }}"
     api_version: v1
     kind: Secret
-    namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
-    name: "x509.local.cluster.svc.{{ K8S_NAMESPACE_PREFIX }}infra0000.proxy"
+    namespace: unimatrix-public
+    name: "x509.local.cluster.svc.unimatrix-public.proxy"
 
 - name: deployed Squid
   k8s:
@@ -53,11 +54,12 @@
       kind: Deployment
       metadata:
         name: squid
-        namespace: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+        namespace: unimatrix-public
         labels:
           app.kubernetes.io/name: squid
           app.kubernetes.io/part-of: proxy
           app.kubernetes.io/component: http
+          ops.unimatrixone.io/env: cluster
       spec:
         replicas: "{{ http_proxy_replicas }}"
         selector:
@@ -75,6 +77,14 @@
               runAsGroup: 1000
               runAsUser: 1000
             affinity:
+              nodeAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  nodeSelectorTerms:
+                  - matchExpressions:
+                    - key: ops.unimatrixone.io/env
+                      operator: In
+                      values:
+                      - cluster
               podAntiAffinity:
                 requiredDuringSchedulingIgnoredDuringExecution:
                 - labelSelector:
@@ -104,7 +114,7 @@
             - emptyDir: {}
               name: log
             - secret:
-                secretName: "x509.local.cluster.svc.{{ K8S_NAMESPACE_PREFIX }}infra0000.proxy"
+                secretName: "x509.local.cluster.svc.unimatrix-public.proxy"
               name: x509
             initContainers:
             - name: clean-state
@@ -182,3 +192,43 @@
                 name: log
               - mountPath: /etc/squid/certs
                 name: x509
+
+- name: expose service for Squid (HTTP)
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        namespace: unimatrix-public
+        name: http-proxy
+        labels:
+          ops.unimatrixone.io/env: cluster
+      spec:
+        selector:
+          app.kubernetes.io/part-of: proxy
+          app.kubernetes.io/component: http
+        ports:
+          - protocol: TCP
+            port: 3128
+
+- name: expose service for Squid (HTTPS)
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        namespace: unimatrix-public
+        name: http-proxy-secure
+        labels:
+          ops.unimatrixone.io/env: cluster
+      spec:
+        selector:
+          app.kubernetes.io/part-of: proxy
+          app.kubernetes.io/component: http
+        ports:
+          - protocol: TCP
+            port: 3129

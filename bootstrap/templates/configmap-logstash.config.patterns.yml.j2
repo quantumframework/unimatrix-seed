@@ -4,6 +4,8 @@ kind: ConfigMap
 metadata:
   name: logstash.config.patterns
   namespace: "{{ namespace }}"
+  labels:
+    ops.unimatrixone.io/env: cluster
 {% if logstash_patterns|default(None) %}
 data:
   {% for fp in logstash_patterns %}{{ fp.path|basename }}: |

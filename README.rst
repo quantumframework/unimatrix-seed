@@ -21,7 +21,8 @@ Importing the cluster CA
 ------------------------
 Import your cluster default certificate authority, assuming
 that the path to the key is ``tls.key`` and to the certificate
-is ``tls.crt``.
+is ``tls.crt``. This certificate is used to secure communication
+between applications running in the cluster.
 
 .. code:: bash
 

@@ -14,35 +14,25 @@
     ANSIBLE_ROLES_PATH: "../roles"
     PYTHONPATH: ""
   vars:
-    K8S_NAMESPACE_PREFIX: "ns{{ deployment_env_alias }}"
-    K8S_DEPLOYMENT_ENV: "{{ deployment_env_name|mandatory }}"
     default_pwd: "/dev/null length=32 chars=hexdigits"
     k8s_validate_certs: false
-    target_environment: "{{ K8S_DEPLOYMENT_ENV|default('cluster') }}"
+    target_environment: cluster
     unimatrix_ca_secret: x509.ca.default
   pre_tasks:
   - include_tasks: ../ops/ansible/includes/auth.yml
-  - include_vars: "../ops/ansible/defaults/{{ deployment_env_name }}.yml"
-  - include_vars: "../ops/ansible/vars/{{ deployment_env_name }}.yml"
   tasks:
   - include_tasks: ../bootstrap/includes/prerequisites.yml
   - include_tasks: ../ops/ansible/includes/facts.yml
-  - include_tasks: ../ops/ansible/includes/dmz.yml
-    with_items: "{{ cluster_dmz_namespaces }}"
-    loop_control:
-      loop_var: dmz
-  - include_tasks: ../ops/ansible/includes/ingress.yml
+  #- include_tasks: ../ops/ansible/includes/dmz.yml
+  #  with_items: "{{ cluster_dmz_namespaces }}"
+  #  loop_control:
+  #    loop_var: dmz
+  #- include_tasks: ../ops/ansible/includes/ingress.yml
   - include_tasks: ../bootstrap/includes/namespaces.yml
-  - include_tasks: ../bootstrap/includes/x509.yml
-  - include_tasks: ../bootstrap/includes/environ.yml
-  - include_tasks: ../bootstrap/includes/logging.yml
-    vars:
-      logstash_pipelines_dir: ../etc/logstash/pipeline
-      logstash_patterns_dir: ../etc/logstash/patterns
-  - include_tasks: ../bootstrap/includes/proxy.yml
-    when: http_proxy_enabled
-  - include_tasks: ../bootstrap/includes/psp.yml
+  - include_tasks: ../ops/ansible/includes/x509.yml
+  - include_tasks: ../ops/ansible/includes/environ.yml
   - include_tasks: ../bootstrap/includes/sa.yml
+  - include_tasks: ../bootstrap/includes/psp.yml
   - name: run common manifests
     with_filetree: manifests/common
     when: item.state == 'file'
@@ -55,6 +45,12 @@
       kubeconfig: "{{ k8s_kubeconfig }}"
       state: present
       definition: "{{ lookup('template', 'manifests/vendor/{{ k8s_platform }}.yml') }}"
+  - include_tasks: ../bootstrap/includes/logging.yml
+    vars:
+      logstash_pipelines_dir: ../etc/logstash/pipeline
+      logstash_patterns_dir: ../etc/logstash/patterns
+  - include_tasks: ../bootstrap/includes/proxy.yml
+    when: http_proxy_enabled
   - name: run user-defined manifests
     with_filetree: manifests/user
     when: item.state == 'file'

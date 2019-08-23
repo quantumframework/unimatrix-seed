@@ -40,6 +40,8 @@
   k8s_facts:
     kubeconfig: "{{ k8s_kubeconfig }}"
     kind: Namespace
+    label_selectors:
+    - "ops.unimatrixone.io/env = {{ target_environment }}"
 
 - set_fact:
     k8s_namespaces: "{{ result.resources }}"

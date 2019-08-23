@@ -2,11 +2,19 @@
 - name: create default namespaces
   with_items:
   - state: present
-    name: "{{ K8S_NAMESPACE_PREFIX }}infra0000"
+    name: unimatrix-system
   - state: present
-    name: unimatrix
+    name: unimatrix-public
   k8s:
     kubeconfig: "{{ k8s_kubeconfig }}"
     state: "{{ item.state|mandatory }}"
-    kind: Namespace
-    name: "{{ item.name|mandatory }}"
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ item.name|mandatory }}"
+        labels:
+          app.kubernetes.io/name: "{{ item.name }}"
+          app.kubernetes.io/component: meta
+          app.kubernetes.io/part-of: unimatrix
+          ops.unimatrixone.io/env: cluster
