@@ -3,7 +3,33 @@
   k8s:
     kubeconfig: "{{ k8s_kubeconfig }}"
     state: present
+    force: true
     definition: "{{ lookup('template', 'templates/configmap.squid.config.whitelist.yml.j2') }}"
+
+- name: created ConfigMap with Filebeat configuration for Squid
+  k8s:
+    kubeconfig: "{{ k8s_kubeconfig }}"
+    state: present
+    force: true
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: squid.config.filebeat
+        namespace: unimatrix-public
+        labels:
+          app.kubernetes.io/name: squid.config.filebeat
+          app.kubernetes.io/part-of: logging
+          app.kubernetes.io/component: beats
+          ops.unimatrixone.io/env: cluster
+      data:
+        filebeat.yml: |-
+          filebeat.inputs:
+          - type: container
+            paths:
+              - /var/log/squid/access.log
+          output.logstash:
+            hosts: ["logstash:5044"]
 
 - name: created X.509 certificate for Squid
   k8s:
@@ -116,6 +142,12 @@
             - secret:
                 secretName: "x509.local.cluster.svc.unimatrix-public.proxy"
               name: x509
+            - emptyDir: {}
+              name: filebeat-data
+            - configMap:
+                defaultMode: 420
+                name: squid.config.filebeat
+              name: filebeat-config
             initContainers:
             - name: clean-state
               image: busybox
@@ -138,6 +170,39 @@
               - name: var
                 mountPath: /var/lib/squid
             containers:
+            - name: filebeat
+              image: docker.elastic.co/beats/filebeat:7.3.0
+              args:
+              - "-c"
+              - "/etc/filebeat.yml"
+              - "-e"
+              env:
+              - name: NODE_NAME
+                valueFrom:
+                  fieldRef:
+                    fieldPath: spec.nodeName
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                  - ALL
+                privileged: false
+                readOnlyRootFilesystem: true
+              resources:
+                limits:
+                  memory: 200Mi
+                requests:
+                  cpu: 100m
+                  memory: 100Mi
+              volumeMounts:
+              - name: filebeat-config
+                mountPath: /etc/filebeat.yml
+                readOnly: true
+                subPath: filebeat.yml
+              - name: filebeat-data
+                mountPath: /usr/share/filebeat/data
+              - name: log
+                mountPath: /var/log/squid
             - name: squid
               image: docker.io/quantumframework/squid:4.8
               imagePullPolicy: Always
